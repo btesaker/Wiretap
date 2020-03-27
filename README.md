@@ -1,7 +1,13 @@
 # Wiretap
+
 Copy ENV, STDIN, STDOUT and STDERR to files for debuging
 
-Takes four parameters, each filaames for the respective source. Specify empty string to disable a tap.
+Synopsis: Wiretap::wiretap list
+
+Parameters:
+File name for the copy of ENV, STDIN, STDOUT and STDERR respectively.
+
+Copy is disabled for file names that evaluates to false in perl.
 
 Usage example:
 
@@ -14,3 +20,4 @@ Usage example:
 	"/tmp/wiretap-$$-STDERR",
 	);
 
+The corresponding source is wiretapped from that on.
