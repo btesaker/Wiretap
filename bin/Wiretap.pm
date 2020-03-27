@@ -4,7 +4,6 @@ use strict;
 package Wiretap;
 
 sub wiretap {
-    use FileHandle;
     use Time::HiRes;
     my $envtape = shift;
     my $intape = shift;
@@ -14,7 +13,6 @@ sub wiretap {
     # Dump the environment
     #
     if ($envtape) {
-	my $tape = FileHandle->new;
 	if (open TAPE, '>', $envtape) {
 	    use Data::Dumper;
 	    print TAPE Dumper(\%ENV);
@@ -27,18 +25,17 @@ sub wiretap {
     #
     if ($intape) {
 	if (open TAPE, '>', $intape) {
-	    my $piperead = FileHandle->new;
-	    my $pipewrite = FileHandle->new;
-	    pipe($piperead, $pipewrite);
+	    pipe(\*INPIPEREAD, \*INPIPEREAD);
 	    if (my $pid = fork()) {
+		close(INPIPEWRITE);
 		close(TAPE);
 		close(STDIN);
-		open(STDIN, "<&", $piperead);
-		eval "END { kill(15, $pid); wait; }";
+		open(STDIN, "<&INPIPEREAD");
 	    }
 	    else {
+		$SIG{PIPE} = $SIG{INT} = $SIG{TERM} = sub { close(TAPE); exit(0); };
 		$0 = "$0 (intape)";
-		select($pipewrite);
+		select(INPIPEREAD);
 		$|=1;
 		while (<STDIN>) {
 		    printf TAPE "%0.9f < %s", Time::HiRes::time(), $_;
@@ -55,24 +52,24 @@ sub wiretap {
     #
     if ($outtape) {
 	if (open TAPE, '>', $outtape) {
-	    my $piperead = FileHandle->new;
-	    my $pipewrite = FileHandle->new;
-	    pipe($piperead, $pipewrite);
+	    pipe(\*OUTPIPEREAD, \*OUTPIPEWRITE);
 	    if (my $pid = fork()) {
+		close(OUTPIPEREAD);
 		close(TAPE);
 		close(STDOUT);
-		open(STDOUT, ">&", $pipewrite);
-		eval "END { kill(15, $pid); wait; wait; }";
+		open(STDOUT, ">&OUTPIPEWRITE");
 	    }
 	    else {
+		close(OUTPIPEWRITE);
+		$SIG{PIPE} = $SIG{INT} = $SIG{TERM} = sub { close(TAPE); exit(0); };
 		$0 = "$0 (outtape)";
-		$SIG{TERM} = sub { close(TAPE); exit(0); };
 		select(STDOUT);
 		$|=1;
-		while (<$piperead>) {
+		while (<OUTPIPEREAD>) {
 		    printf TAPE "%0.9f > %s", Time::HiRes::time(), $_;
 		    print;
 		}
+		close(OUTPIPEREAD);
 		close(TAPE);
 		exit;
 	    }
@@ -84,21 +81,20 @@ sub wiretap {
     #
     if ($errtape) {
 	if (open TAPE, '>', $errtape) {
-	    my $piperead = FileHandle->new;
-	    my $pipewrite = FileHandle->new;
-	    pipe($piperead, $pipewrite);
+	    pipe(\*ERRPIPEREAD, \*ERRPIPEWRITE);
 	    if (my $pid = fork()) {
+		close(ERRPIPEREAD);
 		close(TAPE);
 		close(STDERR);
-		open(STDERR, ">&", $pipewrite);
-		eval "END { kill(15, $pid); wait; wait; }";
+		open(STDERR, ">&ERRPIPEWRITE");
 	    }
 	    else {
+		$SIG{PIPE} = $SIG{INT} = $SIG{TERM} = sub { close(TAPE);  exit(0); };
+		close(ERRPIPEWRITE);
 		$0 = "$0 (errtape)";
-		$SIG{TERM} = sub { close(TAPE); exit(0); };
 		select(STDERR);
 		$|=1;
-		while (<$piperead>) {
+		while (<ERRPIPEREAD>) {
 		    printf TAPE "%0.9f # %s", Time::HiRes::time(), $_;
 		    print;
 		}
