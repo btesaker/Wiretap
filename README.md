@@ -1,6 +1,6 @@
 # Wiretap
 
-Copy ENV, STDIN, STDOUT and STDERR to files for debuging
+Copy ENV, STDIN, STDOUT and STDERR to files for debuging. 
 
 Synopsis: Wiretap::wiretap list
 
@@ -31,3 +31,7 @@ The corresponding source is wiretapped from that on:
 The environment is written with Data::Dumper::Dumper
 
 The file streams is prefixed with Time::HiRes::time() and " < ", " > " " # " respectively.
+
+## Bugs and limitations
+
+This module is linebased and not suited for binary streams.
