@@ -29,7 +29,7 @@ sub wiretap {
     #
     if ($intape) {
 	if (open TAPE, '>', $intape) {
-	    pipe(\*INPIPEREAD, \*INPIPEREAD);
+	    pipe(\*INPIPEREAD, \*INPIPEWRITE);
 	    if (my $pid = fork()) {
 		close(INPIPEWRITE);
 		close(TAPE);
@@ -37,15 +37,17 @@ sub wiretap {
 		open(STDIN, "<&INPIPEREAD");
 	    }
 	    else {
+		close(INPIPEREAD);
 		$SIG{PIPE} = $SIG{INT} = $SIG{TERM} = sub { close(TAPE); exit(0); };
 		$0 = "$0 (intape)";
-		select(INPIPEREAD);
+		select(INPIPEWRITE);
 		$|=1;
 		while (<STDIN>) {
 		    printf TAPE "%0.9f < %s", Time::HiRes::time(), $_;
 		    print;
 		}
 		close(TAPE);
+		close(INPIPEWRITE);
 		exit;
 	    }
 	}
@@ -73,12 +75,11 @@ sub wiretap {
 		    printf TAPE "%0.9f > %s", Time::HiRes::time(), $_;
 		    print;
 		}
-		close(OUTPIPEREAD);
 		close(TAPE);
 		exit;
 	    }
 	}
-	else { warn "open($intape): $!\n"; }
+	else { warn "open($outtape): $!\n"; }
     }
 
     # Tap STDERR
