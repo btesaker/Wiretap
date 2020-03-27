@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+
+# Wiretaping perl script
+# See https://github.com/btesaker/Wiretap
+
 use strict;
 
 package Wiretap;
