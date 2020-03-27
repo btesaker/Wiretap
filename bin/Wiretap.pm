@@ -9,26 +9,28 @@ package Wiretap;
 
 sub wiretap {
     use Time::HiRes;
-    my $envtape = shift;
-    my $intape = shift;
-    my $outtape = shift;
-    my $errtape = shift;
+    my $envtape = shift; $envtape = ['>', $envtape] if $envtape and ref($envtape) ne 'ARRAY';
+    my $intape  = shift; $intape  = ['>', $intape]  if $envtape and ref($intape)  ne 'ARRAY';
+    my $outtape = shift; $outtape = ['>', $outtape] if $envtape and ref($outtape) ne 'ARRAY';
+    my $errtape = shift; $errtape = ['>', $errtape] if $envtape and ref($errtape) ne 'ARRAY';
 
     # Dump the environment
     #
     if ($envtape) {
-	if (open TAPE, '>', $envtape) {
+	my $mode = shift(@$envtape);
+	if (open TAPE, $mode, @$envtape) {
 	    use Data::Dumper;
 	    print TAPE Dumper(\%ENV);
 	    close(TAPE);
 	}
-	else { warn "open($envtape): $!\n"; }
+	else { warn "open($mode, @$envtape): $!\n"; }
     }
 
     # Tap STDIN
     #
     if ($intape) {
-	if (open TAPE, '>', $intape) {
+	my $mode = shift(@$intape);
+	if (open TAPE, $mode, @$intape) {
 	    pipe(\*INPIPEREAD, \*INPIPEWRITE);
 	    if (my $pid = fork()) {
 		close(INPIPEWRITE);
@@ -51,13 +53,14 @@ sub wiretap {
 		exit;
 	    }
 	}
-	else { warn "open($intape): $!\n"; }
+	else { warn "open($mode, @$intape): $!\n"; }
     }
 
     # Tap STDOUT
     #
     if ($outtape) {
-	if (open TAPE, '>', $outtape) {
+	my $mode = shift(@$outtape);
+	if (open TAPE, $mode, @$outtape) {
 	    pipe(\*OUTPIPEREAD, \*OUTPIPEWRITE);
 	    if (my $pid = fork()) {
 		close(OUTPIPEREAD);
@@ -79,13 +82,14 @@ sub wiretap {
 		exit;
 	    }
 	}
-	else { warn "open($outtape): $!\n"; }
+	else { warn "open($mode, @$outtape): $!\n"; }
     }
 
     # Tap STDERR
     #
     if ($errtape) {
-	if (open TAPE, '>', $errtape) {
+	my $mode = shift(@$errtape);
+	if (open TAPE, $mode, @$errtape) {
 	    pipe(\*ERRPIPEREAD, \*ERRPIPEWRITE);
 	    if (my $pid = fork()) {
 		close(ERRPIPEREAD);
@@ -107,7 +111,7 @@ sub wiretap {
 		exit;
 	    }
 	}
-	else { warn "open($errtape): $!\n"; }
+	else { warn "open($mode, @$errtape): $!\n"; }
     }
 }
 
