@@ -7,6 +7,44 @@ use strict;
 
 package Wiretap;
 
+use FileHandle;
+
+###### Experimental and not functioning yet
+sub intap {
+    my $stream = shift;
+    my $bucket = shift or return;
+    $bucket = ['>', $bucket] if $bucket and ref($bucket) ne 'ARRAY';
+    my $mode = shift(@$bucket);
+    #
+    if (open my $tap, $mode, @$bucket) {
+	my $inlet = FileHandle->new();
+	my $outlet = FileHandle->new();
+	pipe($outlet, $inlet);
+	if (my $pid = fork()) {
+	    close($inlet);
+	    close($tap);
+	    close($stream);
+	    open($stream, "<&$outlet");
+	}
+	else {
+	    close($outlet);
+	    $SIG{PIPE} = $SIG{INT} = $SIG{TERM} = sub { close($tap); exit(0); };
+	    select($inlet);
+	    $|=1;
+	    while (<$stream>) {
+		printf $tap "%0.9f < %s", Time::HiRes::time(), $_;
+		print;
+	    }
+	    close($bucket);
+	    close($inlet);
+	    exit;
+	}
+    }
+    else { warn "open($mode, @$bucket): $!\n"; }
+}
+#############################################
+
+
 sub wiretap {
     use Time::HiRes;
     my $envtape = shift; $envtape = ['>', $envtape] if $envtape and ref($envtape) ne 'ARRAY';
